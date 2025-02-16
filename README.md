@@ -52,6 +52,7 @@ grnsuite analyze data/sample.dat --output results.csv
 For more customization, use GRNsuite within a Python script:
 ```python
 from grnalyzer import preprocessing, spike_detection
+
 data = preprocessing.load_data("data/sample.dat")
 spikes = spike_detection.detect_spikes(data)
 print(f"Detected {len(spikes)} spikes")
@@ -68,6 +69,7 @@ snakemake -s workflows/Snakefile --cores 4
 To generate response plots:
 ```python
 from grnalyzer import visualization
+
 visualization.plot_raster(spikes, title="GRN Response")
 ```
 
