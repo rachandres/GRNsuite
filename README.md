@@ -3,6 +3,7 @@
 
 GRNsuite is an open-source software package designed to process, analyze, and visualize extracellular recordings from insect **gustatory receptor neurons (GRNs)**. It provides an **end-to-end pipeline** for electrophysiological data analysis, from raw signal preprocessing to advanced spike detection, unit sorting, and response characterization.  
 
+Author: Rachel H. Parkinson
 ---
 
 ## 🚀 **Features**
