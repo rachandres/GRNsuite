@@ -1,0 +1,10 @@
+rule preprocess:
+    input: "raw_data/{sample}.dat"
+    output: "processed_data/{sample}.csv"
+    script: "grnsuite/preprocessing.py"
+
+rule detect_spikes:
+    input: "processed_data/{sample}.csv"
+    output: "spike_data/{sample}.csv"
+    script: "grnsuite/spike_detection.py"
+
