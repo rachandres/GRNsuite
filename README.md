@@ -29,7 +29,7 @@ GRNsuite is under active development. The package will be available via `pip` an
 
 ### **Clone & Install from Source**
 ```bash
-git clone https://github.com/yourusername/GRNsuite.git
+git clone https://github.com/rachelparkinson/GRNsuite.git
 cd GRNsuite
 pip install -e .
 ```
