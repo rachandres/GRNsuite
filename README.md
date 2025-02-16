@@ -25,12 +25,12 @@ GRNsuite is an open-source software package designed to process, analyze, and vi
 ---
 
 ## 🛠️ **Installation**
-GRNalyzer is under active development. The package will be available via `pip` and `conda` soon.  
+GRNsuite is under active development. The package will be available via `pip` and `conda` soon.  
 
 ### **Clone & Install from Source**
 ```bash
-git clone https://github.com/yourusername/GRNalyzer.git
-cd GRNalyzer
+git clone https://github.com/yourusername/GRNsuite.git
+cd GRNsuite
 pip install -e .
 ```
 
@@ -53,7 +53,7 @@ grnsuite analyze data/sample.dat --output results.csv
 ### **Python API**
 For more customization, use GRNsuite within a Python script:
 ```python
-from grnalyzer import preprocessing, spike_detection
+from GRNsuite import preprocessing, spike_detection
 
 data = preprocessing.load_data("data/sample.dat")
 spikes = spike_detection.detect_spikes(data)
@@ -70,7 +70,7 @@ snakemake -s workflows/Snakefile --cores 4
 ## 📊**Visualization**
 To generate response plots:
 ```python
-from grnalyzer import visualization
+from GRNsuite import visualization
 
 visualization.plot_raster(spikes, title="GRN Response")
 ```
