@@ -211,31 +211,49 @@ def zoom_data(data, fs, offset_time, analysis_length):
 
 def load_and_process_data(filepath, output_dir, param_file='parameters.yaml'):
     """Process data and save intermediate results - non-interactive version"""
-    # Load parameters
-    params = load_parameters(param_file)
-    fs = params['sampling_rate']
-    offset_time = params['offset_time']
-    analysis_length = params['analysis_length']
-    
-    # Load data
-    raw_data = load_ephys_data(filepath)
-    
-    # Process data
-    contact_idx = find_contact_artifact(raw_data)
-    num_samples = int(fs * 3.1)
-    selected_signal = raw_data[contact_idx:contact_idx + num_samples]
-    
-    filtered_data = ashfilt(selected_signal, [100, 1000], 'bandpass', fs=fs)
-    denoised_data = ashfilt(filtered_data, None, 'noise', fs=fs)
-    data_zoomed, current_time = zoom_data(denoised_data, fs, offset_time, analysis_length)
-    
-    # Save results
-    os.makedirs(output_dir, exist_ok=True)
-    df = pd.DataFrame({
-        'time': current_time,
-        'voltage': data_zoomed
-    })
-    output_path = os.path.join(output_dir, 'processed_data.csv')
-    df.to_csv(output_path, index=False)
-    
-    return output_path
+    try:
+        # Load parameters
+        params = load_parameters(param_file)
+        fs = params['sampling_rate']
+        offset_time = params['offset_time']
+        analysis_length = params['analysis_length']
+        
+        print(f"Processing {filepath}")
+        print(f"Using parameters: fs={fs}, offset={offset_time}, length={analysis_length}")
+        
+        # Load data
+        raw_data = load_ephys_data(filepath)
+        print(f"Loaded data with shape: {raw_data.shape}")
+        
+        # Process data
+        contact_idx = find_contact_artifact(raw_data)
+        print(f"Found contact artifact at index: {contact_idx}")
+        
+        num_samples = int(fs * 3.1)
+        selected_signal = raw_data[contact_idx:contact_idx + num_samples]
+        
+        filtered_data = ashfilt(selected_signal, [100, 1000], 'bandpass', fs=fs)
+        denoised_data = ashfilt(filtered_data, None, 'noise', fs=fs)
+        data_zoomed, current_time = zoom_data(denoised_data, fs, offset_time, analysis_length)
+        
+        # Save results
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"Created output directory: {output_dir}")
+        
+        df = pd.DataFrame({
+            'time': current_time,
+            'voltage': data_zoomed
+        })
+        output_path = os.path.join(output_dir, 'processed_data.csv')  # Use os.path.join for proper path handling
+        print(f"Attempting to save to: {output_path}")  # Debug print
+        df.to_csv(output_path, index=False)
+        print(f"Successfully saved processed data to: {output_path}")
+        
+        if not os.path.exists(output_path):  # Verify file was created
+            raise RuntimeError(f"Failed to create output file: {output_path}")
+            
+        return output_path
+        
+    except Exception as e:
+        print(f"Error in load_and_process_data: {str(e)}")
+        raise

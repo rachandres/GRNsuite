@@ -238,6 +238,7 @@ def detect_and_save_spikes(data_path, output_dir, param_file='parameters.yaml'):
     params = load_parameters(param_file)
     t1 = params['schmidt_t1']
     t2 = params['schmidt_t2']
+    fs = params['sampling_rate']
     
     # Load processed data
     data = pd.read_csv(data_path)
@@ -252,13 +253,24 @@ def detect_and_save_spikes(data_path, output_dir, param_file='parameters.yaml'):
     # Convert spike indices to times
     spike_times = current_time[spike_indices]
     
+    # Extract waveforms
+    waveforms = extract_waveforms(data_zoomed, spike_indices, fs)
+    
     # Save results
     os.makedirs(output_dir, exist_ok=True)
+    
+    # Save spike times and values
     spikes_df = pd.DataFrame({
         'spike_times': spike_times,
         'spike_values': spike_values
     })
-    output_path = os.path.join(output_dir, 'detected_spikes.csv')
-    spikes_df.to_csv(output_path, index=False)
+    spikes_path = os.path.join(output_dir, 'detected_spikes.csv')
+    spikes_df.to_csv(spikes_path, index=False)
     
-    return output_path
+    # Save waveforms
+    waveforms_df = pd.DataFrame(waveforms)
+    waveforms_df.columns = [f'sample_{i}' for i in range(waveforms.shape[1])]
+    waveforms_path = os.path.join(output_dir, 'waveforms.csv')
+    waveforms_df.to_csv(waveforms_path, index=False)
+    
+    return spikes_path, waveforms_path

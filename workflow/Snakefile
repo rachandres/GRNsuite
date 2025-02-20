@@ -1,37 +1,50 @@
 # -*- snakemake -*-
-configfile: "workflow/config/config.yaml"
+configfile: "workflow/config/config.yaml"  # Only for sample list
 
 rule all:
     input:
         expand("results/{sample}/detected_spikes.csv",
+               sample=config["samples"]),
+        expand("results/{sample}/waveforms.csv",
                sample=config["samples"])
 
 rule process_raw_data:
     input:
-        "data/{sample}.txt"
+        "data/{sample}.txt",
+        "parameters.yaml"
     output:
         "results/{sample}/processed_data.csv"
     params:
-        param_file = "parameters.yaml"
+        param_file = "parameters.yaml",
+        output_dir = lambda wildcards: f"results/{wildcards.sample}"
+    log:
+        "logs/process_raw_data_{sample}.log"
     run:
         from grnsuite.preprocessing import load_and_process_data
-        load_and_process_data(
-            input[0],
-            "results/{wildcards.sample}",
-            param_file=params.param_file
-        )
+        try:
+            load_and_process_data(
+                input[0],
+                params.output_dir,
+                param_file=params.param_file
+            )
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            raise
 
 rule detect_spikes:
     input:
-        "results/{sample}/processed_data.csv"
+        "results/{sample}/processed_data.csv",
+        "parameters.yaml"
     output:
-        "results/{sample}/detected_spikes.csv"
+        spikes="results/{sample}/detected_spikes.csv",
+        waveforms="results/{sample}/waveforms.csv"
     params:
-        param_file = "parameters.yaml"
+        param_file = "parameters.yaml",
+        output_dir = lambda wildcards: f"results/{wildcards.sample}"
     run:
         from grnsuite.spike_detection import detect_and_save_spikes
         detect_and_save_spikes(
             input[0],
-            "results/{wildcards.sample}",
+            params.output_dir,
             param_file=params.param_file
-        ) 
+        )
