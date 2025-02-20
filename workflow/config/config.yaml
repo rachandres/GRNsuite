@@ -1,0 +1,14 @@
+# Samples to process
+samples:
+    - "20231103-M04-sucr-100-Gal-A1-02"
+    # Add more samples as needed
+
+# Import analysis parameters
+analysis_params: "parameters.yaml"
+
+# Or include them directly here:
+sampling_rate: 30000
+offset_time: 0.1
+analysis_length: 2
+schmidt_t1: 0.75
+schmidt_t2: 1.0 

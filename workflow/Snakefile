@@ -1,0 +1,37 @@
+# -*- snakemake -*-
+configfile: "workflow/config/config.yaml"
+
+rule all:
+    input:
+        expand("results/{sample}/detected_spikes.csv",
+               sample=config["samples"])
+
+rule process_raw_data:
+    input:
+        "data/{sample}.txt"
+    output:
+        "results/{sample}/processed_data.csv"
+    params:
+        param_file = "parameters.yaml"
+    run:
+        from grnsuite.preprocessing import load_and_process_data
+        load_and_process_data(
+            input[0],
+            "results/{wildcards.sample}",
+            param_file=params.param_file
+        )
+
+rule detect_spikes:
+    input:
+        "results/{sample}/processed_data.csv"
+    output:
+        "results/{sample}/detected_spikes.csv"
+    params:
+        param_file = "parameters.yaml"
+    run:
+        from grnsuite.spike_detection import detect_and_save_spikes
+        detect_and_save_spikes(
+            input[0],
+            "results/{wildcards.sample}",
+            param_file=params.param_file
+        ) 

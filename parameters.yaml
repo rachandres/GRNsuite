@@ -1,0 +1,15 @@
+# Data acquisition parameters
+sampling_rate: 30000  # Hz
+
+# Analysis parameters
+offset_time: 0.1     # seconds
+analysis_length: 2.0  # seconds
+
+# Spike detection parameters
+schmidt_t1: 0.75     # Lower threshold multiplier
+schmidt_t2: 1.0      # Upper threshold multiplier
+
+# Metadata
+experimenter: "Your Name"
+experiment_date: "2024-02-20"
+notes: "Add any experimental notes here" 

@@ -1,8 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
+import pandas as pd
+import os
+from .utils import load_parameters
 
-def schmidt_trigger_auto(current_seg, current_time=None, t1=1.5, t2=2.0):
+def schmidt_trigger_auto(current_seg, current_time=None, t1=0.75, t2=1.0):
     """
     Schmidt Trigger spike detection function.
 
@@ -17,8 +20,8 @@ def schmidt_trigger_auto(current_seg, current_time=None, t1=1.5, t2=2.0):
     Parameters:
         current_seg (numpy.ndarray): Data segment to be thresholded.
         current_time (numpy.ndarray, optional): Time vector for data. Defaults to index positions.
-        t1 (float): Lower threshold multiplier (default=1.5 * standard deviation of data).
-        t2 (float): Upper threshold multiplier (default=2.0 * standard deviation of data).
+        t1 (float): Lower threshold multiplier (default=0.75 * standard deviation of data).
+        t2 (float): Upper threshold multiplier (default=1.0 * standard deviation of data).
 
     Returns:
         tuple: 
@@ -75,17 +78,22 @@ def schmidt_trigger_auto(current_seg, current_time=None, t1=1.5, t2=2.0):
     return np.array(mIndx), np.array(mVal), thresh
 
 
-def adjust_threshold(data_zoomed, initial_threshold):
+def adjust_threshold(data_zoomed, initial_threshold=None):
     """
     Interactive GUI for adjusting the threshold used for spike detection.
     
     Parameters:
         data_zoomed (numpy.ndarray): The segment of the signal to visualize.
-        initial_threshold (float): Initial threshold value (from Schmidt Trigger).
+        initial_threshold (float, optional): Initial threshold value. If None, calculates using schmidt_trigger_auto.
 
     Returns:
         float: The user-selected threshold.
     """
+    # If no initial threshold provided, calculate using schmidt_trigger_auto
+    if initial_threshold is None:
+        _, _, thresholds = schmidt_trigger_auto(data_zoomed)
+        initial_threshold = thresholds[1]  # Use upper threshold as starting point
+
     # Initialize figure
     fig, ax = plt.subplots(figsize=(10, 5))
     plt.subplots_adjust(bottom=0.3)
@@ -98,7 +106,8 @@ def adjust_threshold(data_zoomed, initial_threshold):
 
     # Slider to adjust threshold
     ax_slider = plt.axes([0.2, 0.1, 0.65, 0.03])
-    slider = Slider(ax_slider, 'Threshold', np.min(data_zoomed), np.max(data_zoomed), valinit=initial_threshold)
+    slider = Slider(ax_slider, 'Threshold', np.min(data_zoomed), np.max(data_zoomed), 
+                   valinit=initial_threshold)
 
     def update(val):
         """Update the threshold line when slider moves."""
@@ -119,7 +128,7 @@ def adjust_threshold(data_zoomed, initial_threshold):
 
     plt.show(block=True)
 
-    return slider.val  # Return final threshold selection
+    return slider.val
 
 def detect_spikes_manual_threshold(current_seg, threshold):
     """
@@ -222,3 +231,34 @@ def plot_waveforms(waveforms):
     plt.xlabel("Samples")
     plt.ylabel("Amplitude")
     plt.show()
+
+def detect_and_save_spikes(data_path, output_dir, param_file='parameters.yaml'):
+    """Detect spikes and save results - non-interactive version"""
+    # Load parameters
+    params = load_parameters(param_file)
+    t1 = params['schmidt_t1']
+    t2 = params['schmidt_t2']
+    
+    # Load processed data
+    data = pd.read_csv(data_path)
+    data_zoomed = data['voltage'].values
+    current_time = data['time'].values
+    
+    # Detect spikes using automatic thresholds
+    spike_indices, spike_values, _ = schmidt_trigger_auto(
+        data_zoomed, current_time, t1=t1, t2=t2
+    )
+    
+    # Convert spike indices to times
+    spike_times = current_time[spike_indices]
+    
+    # Save results
+    os.makedirs(output_dir, exist_ok=True)
+    spikes_df = pd.DataFrame({
+        'spike_times': spike_times,
+        'spike_values': spike_values
+    })
+    output_path = os.path.join(output_dir, 'detected_spikes.csv')
+    spikes_df.to_csv(output_path, index=False)
+    
+    return output_path

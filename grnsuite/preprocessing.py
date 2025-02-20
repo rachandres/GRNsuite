@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import scipy.signal as signal
 from matplotlib.widgets import Slider, Button
 from scipy.signal import butter, filtfilt
+import pandas as pd
+import os
+from .utils import load_parameters
 
 def load_ephys_data(filepath):
     """
@@ -205,3 +208,34 @@ def zoom_data(data, fs, offset_time, analysis_length):
     current_time = np.arange(len(data_zoomed)) / fs + offset_time
     
     return data_zoomed, current_time
+
+def load_and_process_data(filepath, output_dir, param_file='parameters.yaml'):
+    """Process data and save intermediate results - non-interactive version"""
+    # Load parameters
+    params = load_parameters(param_file)
+    fs = params['sampling_rate']
+    offset_time = params['offset_time']
+    analysis_length = params['analysis_length']
+    
+    # Load data
+    raw_data = load_ephys_data(filepath)
+    
+    # Process data
+    contact_idx = find_contact_artifact(raw_data)
+    num_samples = int(fs * 3.1)
+    selected_signal = raw_data[contact_idx:contact_idx + num_samples]
+    
+    filtered_data = ashfilt(selected_signal, [100, 1000], 'bandpass', fs=fs)
+    denoised_data = ashfilt(filtered_data, None, 'noise', fs=fs)
+    data_zoomed, current_time = zoom_data(denoised_data, fs, offset_time, analysis_length)
+    
+    # Save results
+    os.makedirs(output_dir, exist_ok=True)
+    df = pd.DataFrame({
+        'time': current_time,
+        'voltage': data_zoomed
+    })
+    output_path = os.path.join(output_dir, 'processed_data.csv')
+    df.to_csv(output_path, index=False)
+    
+    return output_path
