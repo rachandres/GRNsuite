@@ -169,3 +169,39 @@ def ashfilt(signal, freq, filter_type, fs):
         return np.array([filtfilt(b, a, row) for row in signal])
     else:
         raise ValueError("Signal must be 1D or 2D.")
+
+def zoom_data(data, fs, offset_time, analysis_length):
+    """
+    Extract a portion of the data starting from offset_time and running for analysis_length duration.
+    
+    Parameters
+    ----------
+    data : numpy.ndarray
+        Input signal data
+    fs : float
+        Sampling frequency in Hz
+    offset_time : float
+        Start time in seconds
+    analysis_length : float
+        Duration to analyze in seconds
+    
+    Returns
+    -------
+    tuple
+        (data_zoomed, current_time)
+        - data_zoomed: numpy.ndarray, extracted portion of the signal
+        - current_time: numpy.ndarray, time points in seconds corresponding to data_zoomed
+    """
+    import numpy as np
+    
+    # Calculate start and end indices (convert time to samples)
+    start_idx = int(offset_time * fs)
+    end_idx = int((offset_time + analysis_length) * fs)
+    
+    # Extract the zoomed portion of the data
+    data_zoomed = data[start_idx:end_idx]
+    
+    # Create time array for the zoomed section (in seconds)
+    current_time = np.arange(len(data_zoomed)) / fs + offset_time
+    
+    return data_zoomed, current_time
