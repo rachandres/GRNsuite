@@ -22,6 +22,12 @@ rule all:
         expand("results/{sample}/detected_spikes.csv",
                sample=SAMPLES),
         expand("results/{sample}/waveforms.csv",
+               sample=SAMPLES),
+        expand("results/{sample}/sorted_spikes.csv",
+               sample=SAMPLES),
+        expand("results/{sample}/unit_averages.csv",
+               sample=SAMPLES),
+        expand("results/{sample}/unit_waveforms.png",
                sample=SAMPLES)
 
 rule process_raw_data:
@@ -70,3 +76,18 @@ rule detect_spikes:
             params.output_dir,
             param_file=params.param_file
         )
+
+rule sort_spikes:
+    input:
+        "results/{sample}/detected_spikes.csv",
+        "results/{sample}/waveforms.csv"
+    output:
+        spikes="results/{sample}/sorted_spikes.csv",
+        averages="results/{sample}/unit_averages.csv",
+        plot="results/{sample}/unit_waveforms.png"
+    params:
+        results_dir=lambda wildcards: f"results/{wildcards.sample}"
+    run:
+        from grnsuite.spike_sorting import sort_spikes, plot_sorting_results
+        sort_spikes(params.results_dir)
+        plot_sorting_results(params.results_dir)
