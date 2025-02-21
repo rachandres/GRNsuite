@@ -1,115 +1,123 @@
 # GRNsuite 🍯🐝👅⚡  
 **A Python package for analyzing insect taste electrophysiology recordings**  
 
-GRNsuite is an open-source software package designed to process, analyze, and visualize extracellular recordings from insect **gustatory receptor neurons (GRNs)**. It provides an **end-to-end pipeline** for electrophysiological data analysis, from raw signal preprocessing to advanced spike detection, unit sorting, and response characterization.  
+GRNsuite is an open-source software package designed to process, analyze, and visualize extracellular recordings from insect **gustatory receptor neurons (GRNs)**. It provides both interactive and automated pipelines for electrophysiological data analysis.
 
 **Author:** Rachel H. Parkinson
 
 ---
 
-## 🚀 **Features**
-- **Preprocessing**: Noise filtering, movement artifact removal, baseline correction  
-- **Spike Detection & Sorting**: Unsupervised clustering for multi-unit separation  
-- **Response Analysis**:  
-  - Firing rates, burst dynamics, and adaptation patterns  
-  - Comparative analysis across stimuli and concentrations  
-  - Machine learning-based stimulus-response classification  
-- **Visualization**:  
-  - Raster plots, peristimulus time histograms (PSTH), and firing rate trends  
-  - Heatmaps, response concentration gradients, and interactive plots  
-- **Workflows**:  
-  - **Command-line interface (CLI)** for batch processing  
-  - **Graphical User Interface (GUI)** for non-programmers (coming soon)  
-  - **Snakemake integration** for reproducible analysis pipelines  
+## 🚀 **Current Features**
+- **Data Processing**:
+  - Automated contact artifact detection
+  - Bandpass filtering (100-1000 Hz)
+  - Noise reduction
+  - Configurable time window selection
+- **Spike Detection**:
+  - Schmidt trigger detection with configurable thresholds
+  - Interactive threshold adjustment
+  - Automated vs manual detection comparison
+- **Waveform Analysis**:
+  - Spike waveform extraction
+  - Waveform averaging and comparison
+- **Metadata Management**:
+  - Automated metadata extraction from filenames
+  - Experiment parameter tracking
+  - JSON metadata storage
 
 ---
 
 ## 🛠️ **Installation**
-GRNsuite is under active development. The package will be available via `pip` and `conda` soon.  
-
-### **Clone & Install from Source**
 ```bash
 git clone https://github.com/rachelparkinson/GRNsuite.git
 cd GRNsuite
-pip install -e .
-```
-
-### **Create a Virtual Environment**
-```bash
 python -m venv venv
 source venv/bin/activate  # On Windows use `venv\Scripts\activate`
 pip install -r requirements.txt
 ```
 
 ---
-## 💻**Usage**
+## 💻 **Usage**
 
-### **Command-Line Interface (CLI)**
-After installation, you can use the CLI for fast analysis:
+### **Configuration**
+Create or modify `parameters.yaml` to set your analysis parameters:
+```yaml
+# Data acquisition parameters
+sampling_rate: 30000  # Hz
+offset_time: 0.1     # seconds
+analysis_length: 2.0  # seconds
+
+# Spike detection parameters
+schmidt_t1: 0.75     # Lower threshold multiplier
+schmidt_t2: 1.0      # Upper threshold multiplier
+
+# Processing mode
+process_mode: "all"  # Options: "all" or "selected"
+selected_samples:    # Used when process_mode is "selected"
+    - "20231103-M04-sucr-100-Gal-A1-02"
+
+# Metadata parsing
+filename_parsing:
+    separator: "-"   # Options: "-" or "_"
+    fields:
+        - date
+        - animal_id
+        - stimulus
+        - concentration
+        - location
+        - sensillum_id
+        - replicate
+```
+
+### **Interactive Workflow**
+Use the Jupyter notebook `demo_workflows.ipynb` for:
+- Manual contact artifact selection
+- Interactive threshold adjustment
+- Visual comparison of detection methods
+- Single or batch file processing with user confirmation
+
+### **Automated Workflow**
+For batch processing using Snakemake:
 ```bash
-grnsuite analyze data/sample.dat --output results.csv
+# Process all files in data directory
+snakemake --cores 1 -s workflow/Snakefile --latency-wait 30
+
+# Use multiple cores for faster processing
+snakemake --cores 4 -s workflow/Snakefile --latency-wait 30
 ```
 
-### **Python API**
-For more customization, use GRNsuite within a Python script:
-```python
-from GRNsuite import preprocessing, spike_detection
-
-data = preprocessing.load_data("data/sample.dat")
-spikes = spike_detection.detect_spikes(data)
-print(f"Detected {len(spikes)} spikes")
+### **Output Structure**
+For each processed file, GRNsuite creates:
 ```
-
-### **Snakemake Workflow**
-For batch processing, use Snakemake:
-```bash
-snakemake -s workflows/Snakefile --cores 4
+results/
+└── {filename}/
+    ├── processed_data.csv   # Filtered and processed signal
+    ├── detected_spikes.csv  # Spike times and amplitudes
+    ├── waveforms.csv        # Extracted spike waveforms
+    └── metadata.json        # Analysis parameters and file metadata
 ```
 
 ---
-## 📊**Visualization**
-To generate response plots:
-```python
-from GRNsuite import visualization
-
-visualization.plot_raster(spikes, title="GRN Response")
-```
-
-## 📖**Documentation**
-Full documentation, API references, and tutorials will be available at:
-COMING SOON
-
-## 📝 **To-Do List**
-- [x] Set up repository & package structure  
-- [ ] Implement preprocessing & spike detection  
-- [ ] Develop GUI for non-programmers 🖥️  
-- [ ] Add machine learning-based response classification 🤖  
-- [ ] Publish to PyPI and Conda 📦  
+## 📊 **Current Pipeline Status**
+- [x] Basic data loading and preprocessing
+- [x] Contact artifact detection
+- [x] Signal filtering and noise reduction
+- [x] Spike detection (Schmidt trigger)
+- [x] Waveform extraction
+- [x] Metadata management
+- [x] Interactive and automated workflows
+- [x] Snakemake integration
+- [ ] Unit sorting
+- [ ] Response analysis
+- [ ] GUI development
+- [ ] Advanced visualization tools
 
 ---
-
-## 👥 **Contributing**
-We welcome contributions! To contribute to **GRNsuite**, follow these steps:  
-
-1. **Fork the repository** to your own GitHub account.  
-2. **Create a new branch** for your feature or bug fix:  
-   ```bash
-   git checkout -b feature-name
-   ```
-3. **Make your changes** and commit them:
-   ```bash
-   git commit -m "Added new feature"
-   ```
-4. **Push your branch** on GitHub:
-   ```bash
-   git push origin feature-name
-   ```
-5. **Submit a Pull Request** and describe the changes you've made.
-
-For major changes, please open an **Issue** first to discuss your ideas.
+## 📝 **Contributing**
+We welcome contributions! Please see our contributing guidelines for more information.
 
 ---
-## 📜**License**
+## 📜 **License**
 This project is licensed under the MIT License. See LICENSE for details.
 
 
