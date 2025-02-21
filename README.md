@@ -79,11 +79,17 @@ Use the Jupyter notebook `demo_workflows.ipynb` for:
 ### **Automated Workflow**
 For batch processing using Snakemake:
 ```bash
+# Dry run to check the workflow
+snakemake -n
+
 # Process all files in data directory
-snakemake --cores 1 -s workflow/Snakefile --latency-wait 30
+snakemake --cores 1 -s workflow/Snakefile
 
 # Use multiple cores for faster processing
-snakemake --cores 4 -s workflow/Snakefile --latency-wait 30
+snakemake --cores 4 -s workflow/Snakefile
+
+# Run with detailed output and progress
+snakemake --cores 1 -p
 ```
 
 ### **Output Structure**

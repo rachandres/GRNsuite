@@ -1,93 +1,129 @@
 # -*- snakemake -*-
 configfile: "parameters.yaml"  # Read directly from parameters.yaml
 
-import glob
 import os
+import glob
+import pandas as pd
+from grnsuite.preprocessing import load_and_process_data, save_metadata
+from grnsuite.spike_detection import schmidt_trigger_auto, extract_waveforms
+from grnsuite.spike_sorting import sort_spikes, plot_sorting_results, plot_clustering_summary, plot_sorted_spikes
 
-def get_samples():
-    if config["process_mode"] == "all":
-        # Get all txt files from data directory
-        files = glob.glob("data/*.txt")
-        # Strip path and extension
-        return [os.path.splitext(os.path.basename(f))[0] for f in files]
-    else:
-        # Use selected samples from config
-        return config["selected_samples"]
-
-# Get samples based on mode
-SAMPLES = get_samples()
+# Automatically find all .txt files in data directory
+DATA_DIR = "data"
+RECORDINGS = []
+for file in glob.glob(os.path.join(DATA_DIR, "*.txt")):
+    recording_id = os.path.basename(file).replace(".txt", "")
+    RECORDINGS.append(recording_id)
 
 rule all:
     input:
-        expand("results/{sample}/detected_spikes.csv",
-               sample=SAMPLES),
-        expand("results/{sample}/waveforms.csv",
-               sample=SAMPLES),
-        expand("results/{sample}/sorted_spikes.csv",
-               sample=SAMPLES),
-        expand("results/{sample}/unit_averages.csv",
-               sample=SAMPLES),
-        expand("results/{sample}/unit_waveforms.png",
-               sample=SAMPLES)
+        expand("results/{recording}/sorted_spikes.csv",
+               recording=RECORDINGS)
 
-rule process_raw_data:
+rule save_metadata:
     input:
-        "data/{sample}.txt",
-        "parameters.yaml"
+        data="data/{recording}.txt",
+        params="parameters.yaml"
     output:
-        "results/{sample}/processed_data.csv"
-    params:
-        param_file = "parameters.yaml",
-        output_dir = lambda wildcards: f"results/{wildcards.sample}"
-    log:
-        "logs/process_raw_data_{sample}.log"
+        metadata="results/{recording}/metadata.json"
     run:
-        from grnsuite.preprocessing import load_and_process_data
-        from grnsuite.utils import parse_filename_metadata
+        # Create results directory
+        os.makedirs(os.path.dirname(output.metadata), exist_ok=True)
         
-        # Parse metadata
-        metadata = parse_filename_metadata(wildcards.sample, config)
-        
-        try:
-            load_and_process_data(
-                input[0],
-                params.output_dir,
-                param_file=params.param_file,
-                metadata=metadata  # Pass metadata to processing function
-            )
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            raise
+        # Save metadata
+        save_metadata(
+            input.data,
+            os.path.dirname(output.metadata),
+            config
+        )
+
+rule process_data:
+    input:
+        data="data/{recording}.txt",
+        params="parameters.yaml",
+        metadata="results/{recording}/metadata.json"  # Add dependency on metadata
+    output:
+        processed="results/{recording}/processed_data.csv"
+    run:
+        # Load and process data
+        load_and_process_data(
+            input.data,
+            output.processed,
+            sampling_rate=config['sampling_rate'],
+            filter_high=1000
+        )
 
 rule detect_spikes:
     input:
-        "results/{sample}/processed_data.csv",
-        "parameters.yaml"
+        data="results/{recording}/processed_data.csv",
+        params="parameters.yaml"
     output:
-        spikes="results/{sample}/detected_spikes.csv",
-        waveforms="results/{sample}/waveforms.csv"
-    params:
-        param_file = "parameters.yaml",
-        output_dir = lambda wildcards: f"results/{wildcards.sample}"
+        spikes="results/{recording}/detected_spikes.csv"
     run:
-        from grnsuite.spike_detection import detect_and_save_spikes
-        detect_and_save_spikes(
-            input[0],
-            params.output_dir,
-            param_file=params.param_file
+        # Detect spikes using schmidt trigger
+        schmidt_trigger_auto(
+            input.data,
+            os.path.dirname(output.spikes),
+            config['schmidt_t1'],
+            config['schmidt_t2']
+        )
+
+rule extract_waveforms:
+    input:
+        data="results/{recording}/processed_data.csv",
+        spikes="results/{recording}/detected_spikes.csv"
+    output:
+        waveforms="results/{recording}/waveforms.csv"
+    run:
+        # Extract waveforms
+        extract_waveforms(
+            input.data,
+            input.spikes,
+            os.path.dirname(output.waveforms),
+            pre_samples=30,  # Can be added to config if needed
+            post_samples=30
         )
 
 rule sort_spikes:
     input:
-        "results/{sample}/detected_spikes.csv",
-        "results/{sample}/waveforms.csv"
+        spikes="results/{recording}/detected_spikes.csv",
+        waveforms="results/{recording}/waveforms.csv",
+        data="results/{recording}/processed_data.csv"
     output:
-        spikes="results/{sample}/sorted_spikes.csv",
-        averages="results/{sample}/unit_averages.csv",
-        plot="results/{sample}/unit_waveforms.png"
-    params:
-        results_dir=lambda wildcards: f"results/{wildcards.sample}"
+        sorted_spikes="results/{recording}/sorted_spikes.csv",
+        unit_averages="results/{recording}/unit_averages.csv",
+        clustering_summary="results/{recording}/clustering_summary.png",
+        sorted_spikes_plot="results/{recording}/sorted_spikes.png",
+        unit_waveforms="results/{recording}/unit_waveforms.png"
     run:
-        from grnsuite.spike_sorting import sort_spikes, plot_sorting_results
-        sort_spikes(params.results_dir)
-        plot_sorting_results(params.results_dir)
+        results_dir = os.path.dirname(output.sorted_spikes)
+        
+        # Sort spikes
+        sort_spikes(results_dir)
+        
+        # Load data for plotting
+        waveforms = pd.read_csv(input.waveforms).values
+        spikes_df = pd.read_csv(output.sorted_spikes)
+        processed_data = pd.read_csv(input.data)
+        
+        # Reduce dimensions and cluster for plotting
+        from grnsuite.spike_sorting import reduce_dimensions, cluster_spikes
+        reduced_waveforms = reduce_dimensions(waveforms)
+        labels = cluster_spikes(reduced_waveforms)
+        
+        # Generate plots
+        plot_clustering_summary(
+            waveforms,
+            reduced_waveforms,
+            labels,
+            save_path=output.clustering_summary
+        )
+        
+        plot_sorted_spikes(
+            processed_data,
+            spikes_df,
+            save_path=output.sorted_spikes_plot
+        )
+        
+        # Plot unit waveforms
+        plot_sorting_results(results_dir)

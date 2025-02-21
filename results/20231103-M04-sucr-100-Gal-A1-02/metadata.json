@@ -1,17 +1,18 @@
 {
-    "date": "20231103",
-    "animal_id": "M04",
-    "stimulus": "sucr",
-    "concentration": "100",
-    "location": "Gal",
-    "sensillum_id": "A1",
-    "replicate": "02",
+    "input_file": "data/20231103-M04-sucr-100-Gal-A1-02.txt",
     "experimenter": "RHP",
     "analysis_date": "2025-02-21",
     "notes": "Add any experimental notes here",
     "sampling_rate": 30000,
     "offset_time": 0.1,
     "analysis_length": 2.0,
-    "schmidt_t1": 0.75,
-    "schmidt_t2": 1.0
+    "schmidt_t1": 1.0,
+    "schmidt_t2": 1.25,
+    "date": "20231103",
+    "animal_id": "M04",
+    "stimulus": "sucr",
+    "concentration": "100",
+    "location": "Gal",
+    "sensillum_id": "A1",
+    "replicate": "02.txt"
 }

@@ -6,6 +6,8 @@ from scipy.signal import butter, filtfilt
 import pandas as pd
 import os
 from .utils import load_parameters
+import json
+from datetime import datetime
 
 def load_ephys_data(filepath):
     """
@@ -209,72 +211,109 @@ def zoom_data(data, fs, offset_time, analysis_length):
     
     return data_zoomed, current_time
 
-def load_and_process_data(filepath, output_dir, param_file='parameters.yaml', metadata=None):
-    """Process data and save intermediate results - non-interactive version"""
+def load_and_process_data(input_file, output_file, sampling_rate=30000, filter_high=1000):
+    """
+    Load and process raw data file.
+    
+    Parameters:
+        input_file (str): Path to input file
+        output_file (str): Path to save processed data
+        sampling_rate (int): Sampling rate in Hz
+        filter_high (int): High-pass filter cutoff frequency
+    """
     try:
-        # Load parameters
-        params = load_parameters(param_file)
-        fs = params['sampling_rate']
+        # Load parameters for timing windows
+        params = load_parameters('parameters.yaml')
         offset_time = params['offset_time']
         analysis_length = params['analysis_length']
         
-        print(f"Processing {filepath}")
-        print(f"Using parameters: fs={fs}, offset={offset_time}, length={analysis_length}")
+        print(f"Processing {input_file}")
+        print(f"Using parameters: fs={sampling_rate}, offset={offset_time}, length={analysis_length}")
         
-        # Create output directory
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Save metadata if provided
-        if metadata:
-            # Add additional metadata
-            metadata.update({
-                'experimenter': params['experimenter'],
-                'analysis_date': params['analysis_date'],
-                'notes': params['notes'],
-                'sampling_rate': fs,
-                'offset_time': offset_time,
-                'analysis_length': analysis_length,
-                'schmidt_t1': params['schmidt_t1'],
-                'schmidt_t2': params['schmidt_t2']
-            })
-            
-            # Save metadata
-            import json
-            metadata_path = os.path.join(output_dir, 'metadata.json')
-            with open(metadata_path, 'w') as f:
-                json.dump(metadata, f, indent=4)
-            print(f"Saved metadata to: {metadata_path}")
+        # Create output directory if it's a directory path
+        output_dir = os.path.dirname(output_file)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
         
         # Load and process data
-        raw_data = load_ephys_data(filepath)
+        raw_data = load_ephys_data(input_file)
         print(f"Loaded data with shape: {raw_data.shape}")
         
-        # Rest of the processing...
+        # Process the data
         contact_idx = find_contact_artifact(raw_data)
         print(f"Found contact artifact at index: {contact_idx}")
         
-        num_samples = int(fs * 3.1)
+        num_samples = int(sampling_rate * 3.1)
         selected_signal = raw_data[contact_idx:contact_idx + num_samples]
         
-        filtered_data = ashfilt(selected_signal, [100, 1000], 'bandpass', fs=fs)
-        denoised_data = ashfilt(filtered_data, None, 'noise', fs=fs)
-        data_zoomed, current_time = zoom_data(denoised_data, fs, offset_time, analysis_length)
+        filtered_data = ashfilt(selected_signal, [100, filter_high], 'bandpass', fs=sampling_rate)
+        denoised_data = ashfilt(filtered_data, None, 'noise', fs=sampling_rate)
+        data_zoomed, current_time = zoom_data(denoised_data, sampling_rate, offset_time, analysis_length)
         
         # Save processed data
         df = pd.DataFrame({
             'time': current_time,
             'voltage': data_zoomed
         })
-        output_path = os.path.join(output_dir, 'processed_data.csv')
-        print(f"Attempting to save to: {output_path}")
-        df.to_csv(output_path, index=False)
-        print(f"Successfully saved processed data to: {output_path}")
+        df.to_csv(output_file, index=False)
+        print(f"Successfully saved processed data to: {output_file}")
         
-        if not os.path.exists(output_path):
-            raise RuntimeError(f"Failed to create output file: {output_path}")
+        if not os.path.exists(output_file):
+            raise RuntimeError(f"Failed to create output file: {output_file}")
             
-        return output_path
+        return output_file
         
     except Exception as e:
         print(f"Error in load_and_process_data: {str(e)}")
+        raise
+
+def save_metadata(input_file, output_dir, params):
+    """
+    Save metadata for a recording to a JSON file.
+    
+    Parameters
+    ----------
+    input_file : str
+        Path to input data file
+    output_dir : str
+        Directory to save metadata
+    params : dict
+        Parameters from parameters.yaml
+    """
+    try:
+        # Create metadata dictionary
+        metadata = {
+            'input_file': input_file,
+            'experimenter': params.get('experimenter', ''),
+            'analysis_date': params.get('analysis_date', datetime.now().strftime('%Y-%m-%d')),
+            'notes': params.get('notes', ''),
+            'sampling_rate': params['sampling_rate'],
+            'offset_time': params['offset_time'],
+            'analysis_length': params['analysis_length'],
+            'schmidt_t1': params['schmidt_t1'],
+            'schmidt_t2': params['schmidt_t2']
+        }
+        
+        # Parse filename if parsing rules exist
+        if 'filename_parsing' in params:
+            parse_rules = params['filename_parsing']
+            filename = os.path.basename(input_file)
+            parts = filename.split(parse_rules['separator'])
+            
+            if len(parts) >= len(parse_rules['fields']):
+                for field, value in zip(parse_rules['fields'], parts):
+                    metadata[field] = value
+        
+        # Save metadata
+        metadata_path = os.path.join(output_dir, 'metadata.json')
+        os.makedirs(output_dir, exist_ok=True)
+        
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=4)
+            
+        print(f"Saved metadata to: {metadata_path}")
+        return metadata_path
+        
+    except Exception as e:
+        print(f"Error saving metadata: {str(e)}")
         raise
