@@ -1,12 +1,28 @@
 # -*- snakemake -*-
-configfile: "workflow/config/config.yaml"  # Only for sample list
+configfile: "parameters.yaml"  # Read directly from parameters.yaml
+
+import glob
+import os
+
+def get_samples():
+    if config["process_mode"] == "all":
+        # Get all txt files from data directory
+        files = glob.glob("data/*.txt")
+        # Strip path and extension
+        return [os.path.splitext(os.path.basename(f))[0] for f in files]
+    else:
+        # Use selected samples from config
+        return config["selected_samples"]
+
+# Get samples based on mode
+SAMPLES = get_samples()
 
 rule all:
     input:
         expand("results/{sample}/detected_spikes.csv",
-               sample=config["samples"]),
+               sample=SAMPLES),
         expand("results/{sample}/waveforms.csv",
-               sample=config["samples"])
+               sample=SAMPLES)
 
 rule process_raw_data:
     input:
@@ -21,11 +37,17 @@ rule process_raw_data:
         "logs/process_raw_data_{sample}.log"
     run:
         from grnsuite.preprocessing import load_and_process_data
+        from grnsuite.utils import parse_filename_metadata
+        
+        # Parse metadata
+        metadata = parse_filename_metadata(wildcards.sample, config)
+        
         try:
             load_and_process_data(
                 input[0],
                 params.output_dir,
-                param_file=params.param_file
+                param_file=params.param_file,
+                metadata=metadata  # Pass metadata to processing function
             )
         except Exception as e:
             print(f"Error: {str(e)}")

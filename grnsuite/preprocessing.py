@@ -209,7 +209,7 @@ def zoom_data(data, fs, offset_time, analysis_length):
     
     return data_zoomed, current_time
 
-def load_and_process_data(filepath, output_dir, param_file='parameters.yaml'):
+def load_and_process_data(filepath, output_dir, param_file='parameters.yaml', metadata=None):
     """Process data and save intermediate results - non-interactive version"""
     try:
         # Load parameters
@@ -221,11 +221,35 @@ def load_and_process_data(filepath, output_dir, param_file='parameters.yaml'):
         print(f"Processing {filepath}")
         print(f"Using parameters: fs={fs}, offset={offset_time}, length={analysis_length}")
         
-        # Load data
+        # Create output directory
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Save metadata if provided
+        if metadata:
+            # Add additional metadata
+            metadata.update({
+                'experimenter': params['experimenter'],
+                'analysis_date': params['analysis_date'],
+                'notes': params['notes'],
+                'sampling_rate': fs,
+                'offset_time': offset_time,
+                'analysis_length': analysis_length,
+                'schmidt_t1': params['schmidt_t1'],
+                'schmidt_t2': params['schmidt_t2']
+            })
+            
+            # Save metadata
+            import json
+            metadata_path = os.path.join(output_dir, 'metadata.json')
+            with open(metadata_path, 'w') as f:
+                json.dump(metadata, f, indent=4)
+            print(f"Saved metadata to: {metadata_path}")
+        
+        # Load and process data
         raw_data = load_ephys_data(filepath)
         print(f"Loaded data with shape: {raw_data.shape}")
         
-        # Process data
+        # Rest of the processing...
         contact_idx = find_contact_artifact(raw_data)
         print(f"Found contact artifact at index: {contact_idx}")
         
@@ -236,20 +260,17 @@ def load_and_process_data(filepath, output_dir, param_file='parameters.yaml'):
         denoised_data = ashfilt(filtered_data, None, 'noise', fs=fs)
         data_zoomed, current_time = zoom_data(denoised_data, fs, offset_time, analysis_length)
         
-        # Save results
-        os.makedirs(output_dir, exist_ok=True)
-        print(f"Created output directory: {output_dir}")
-        
+        # Save processed data
         df = pd.DataFrame({
             'time': current_time,
             'voltage': data_zoomed
         })
-        output_path = os.path.join(output_dir, 'processed_data.csv')  # Use os.path.join for proper path handling
-        print(f"Attempting to save to: {output_path}")  # Debug print
+        output_path = os.path.join(output_dir, 'processed_data.csv')
+        print(f"Attempting to save to: {output_path}")
         df.to_csv(output_path, index=False)
         print(f"Successfully saved processed data to: {output_path}")
         
-        if not os.path.exists(output_path):  # Verify file was created
+        if not os.path.exists(output_path):
             raise RuntimeError(f"Failed to create output file: {output_path}")
             
         return output_path

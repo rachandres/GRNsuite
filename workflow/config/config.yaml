@@ -1,7 +1,2 @@
-# Samples to process
-samples:
-    - "20231103-M04-sucr-100-Gal-A1-02"
-    # Add more samples as needed
-
-# import analysis parameters
-analysis_params: "parameters.yaml"
+# All parameters are now in parameters.yaml
+parameters_file: "parameters.yaml"

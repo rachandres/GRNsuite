@@ -9,7 +9,35 @@ analysis_length: 2.0  # seconds
 schmidt_t1: 0.75     # Lower threshold multiplier
 schmidt_t2: 1.0      # Upper threshold multiplier
 
+# Processing mode
+process_mode: "all"  # Change from "selected" to "all"
+selected_samples:
+    - "20231103-M04-sucr-100-Gal-A1-02"
+    # Add more samples here when using "selected" mode
+
+# Metadata parsing
+filename_parsing:
+    separator: "-"  # Options: "-" or "_"
+    fields:
+        - date          # e.g., 20231103
+        - animal_id     # e.g., M04
+        - stimulus      # e.g., sucr
+        - concentration # e.g., 100
+        - location  # e.g., Gal
+        - sensillum_id  # e.g., A1
+        - replicate  # e.g., 02
+
 # Metadata
-experimenter: "Your Name"
-experiment_date: "2024-02-20"
-notes: "Add any experimental notes here" 
+experimenter: "RHP"
+# analysis_date: Set automatically to current date
+notes: "Add any experimental notes here"
+
+# Field descriptions (for reference)
+field_descriptions:
+    date: "Recording date in YYYYMMDD format"
+    animal_id: "Animal identifier"
+    stimulus: "Applied stimulus (e.g., sucr for sucrose)"
+    concentration: "Stimulus concentration"
+    location: "Sensillum location(e.g., Gal for galea)"
+    sensillum_id: "Sensillum identifier"
+    replicate: "Replicate number" 
