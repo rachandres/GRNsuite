@@ -5,18 +5,25 @@ sampling_rate: 30000  # Hz
 offset_time: 0.1     # seconds
 analysis_length: 2.0  # seconds
 
+# Filtering parameters
+filter_low: 100  # Hz
+filter_high: 1000  # Hz
+
 # Spike detection parameters
-schmidt_t1: 1.0     # Lower threshold multiplier
-schmidt_t2: 1.25      # Upper threshold multiplier
+schmidt_t1: 1.0     # Lower threshold multiplier (1.0 is the default)
+schmidt_t2: 1.25      # Upper threshold multiplier (1.25 is the default)
+
+# Waveform parameters  
+length_divisor: 500 # converts fs to ms (/1000)and takes 2 ms before the spike (*2)
 
 # Processing mode
-process_mode: "all"
+process_mode: "all" # Options: "all" or "single" - keep on "single" to look at 1 file, "all" to process all files in the data folder
 
 # Recordings to process
 recordings:
   "20231103-M04-sucr-100-Gal-A1-02":
     data_file: "data/20231103-M04-sucr-100-Gal-A1-02.txt"
-  # Add other recordings here...
+  # Add other recordings here... 
 
 # Metadata parsing
 filename_parsing:
