@@ -274,19 +274,83 @@ def extract_waveforms(data_file, spikes_file, output_dir, pre_peak_length=2, pos
     
     return output_file
 
-def plot_waveforms(waveforms):
+def plot_waveforms(waveforms, pre_peak_ms=2.0, post_peak_ms=2.0, show_time_axis=True, figsize=(10, 8), output_dir=None):
     """
-    Plots all extracted waveforms overlaid with semi-transparent thin lines.
+    Plots all extracted waveforms with two subplots:
+    1. Raw waveforms overlay
+    2. Average waveform with standard deviation
 
     Parameters:
         waveforms (numpy.ndarray): Extracted spike waveforms, shape (num_spikes, window_samples).
+        pre_peak_ms (float): Milliseconds before the spike peak, used for time axis.
+        post_peak_ms (float): Milliseconds after the spike peak, used for time axis.
+        show_time_axis (bool): If True, x-axis is in milliseconds. If False, in samples.
+        figsize (tuple): Figure size as (width, height).
+        output_dir (str, optional): Directory to save the figure as PNG. If None, figure is not saved.
+    
+    Returns:
+        tuple: (avg_waveform, std_waveform) - the average and standard deviation of waveforms
     """
-    plt.figure(figsize=(8, 5))
-
+    # Calculate average and standard deviation
+    avg_waveform = np.mean(waveforms, axis=0)
+    std_waveform = np.std(waveforms, axis=0)
+    
+    # Create x-axis values
+    if show_time_axis:
+        x_values = np.linspace(-pre_peak_ms, post_peak_ms, waveforms.shape[1])
+        x_label = "Time (ms)"
+    else:
+        x_values = np.arange(waveforms.shape[1])
+        x_label = "Samples"
+    
+    # Calculate y-limits based on all waveforms (with a small padding)
+    y_min = np.min(waveforms) * 1.05  # Add 5% padding
+    y_max = np.max(waveforms) * 1.05
+        
+    # Create figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize, sharex=True)
+    
+    # Subplot 1: Raw waveforms
     for waveform in waveforms:
-        plt.plot(waveform, color="blue", alpha=0.2, linewidth=0.5)  # Thin, semi-transparent lines
-
-    plt.title("Extracted Spike Waveforms")
-    plt.xlabel("Samples")
-    plt.ylabel("Amplitude")
+        ax1.plot(x_values, waveform, color="blue", alpha=0.2, linewidth=0.5)
+    
+    ax1.set_title(f"Individual Spike Waveforms ({waveforms.shape[0]} spikes)")
+    ax1.set_ylabel("Amplitude")
+    ax1.set_ylim(y_min, y_max)  # Set y-limits
+    if show_time_axis:
+        ax1.axvline(x=0, color='b', linestyle='--', alpha=0.7, label='Spike Peak')
+        ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    # Subplot 2: Average waveform with standard deviation
+    ax2.plot(x_values, avg_waveform, 'r-', linewidth=2, label='Average Waveform')
+    ax2.fill_between(x_values, 
+                     avg_waveform - std_waveform, 
+                     avg_waveform + std_waveform, 
+                     color='r', alpha=0.2, label='± Standard Deviation')
+    
+    ax2.set_ylim(y_min, y_max)  # Use same y-limits as first subplot
+    if show_time_axis:
+        ax2.axvline(x=0, color='b', linestyle='--', alpha=0.7, label='Spike Peak')
+    
+    ax2.set_title("Average Waveform with Standard Deviation")
+    ax2.set_xlabel(x_label)
+    ax2.set_ylabel("Amplitude")
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    # Adjust layout
+    plt.tight_layout()
+    
+    # Save figure if output directory is provided
+    if output_dir is not None:
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        fig_path = os.path.join(output_dir, 'waveforms_plot.png')
+        plt.savefig(fig_path, dpi=300)
+        print(f"Waveform figure saved to: {fig_path}")
+    
+    # Show the figure
     plt.show()
+    
+    return avg_waveform, std_waveform

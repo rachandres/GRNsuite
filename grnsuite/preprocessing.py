@@ -116,13 +116,14 @@ def filter_signal(signal, params):
     
     return denoised_data
 
-def zoom_to_region(signal, params):
+def zoom_to_region(signal, params, output_dir=None):
     """
-    Zoom to region of interest in the signal.
+    Zoom to region of interest in the signal and optionally save a visualization.
     
     Parameters:
         signal (np.ndarray): Input signal
         params (dict): Parameters dictionary
+        output_dir (str, optional): Directory to save visualization. If None, no figure is saved.
         
     Returns:
         tuple: (zoomed_signal, time_vector)
@@ -131,7 +132,67 @@ def zoom_to_region(signal, params):
     analysis_length = params['analysis_length']
     sampling_rate = params['sampling_rate']
     
-    return _zoom_data(signal, sampling_rate, offset_time, analysis_length)
+    # Get zoomed data
+    zoomed_signal, time_vector = _zoom_data(signal, sampling_rate, offset_time, analysis_length)
+    
+    # Create and save visualization if output_dir is provided
+    if output_dir is not None:
+        # Create figure and subplots
+        fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=False)
+        
+        # Calculate zoom window indices
+        start_idx = int(offset_time * sampling_rate)
+        end_idx = int((offset_time + analysis_length) * sampling_rate)
+        
+        # Plot 1: Full signal with highlighted region
+        full_time = np.arange(len(signal)) / sampling_rate
+        axes[0].plot(full_time, signal, 'b-', alpha=0.7)
+        
+        # Highlight the zoomed region
+        axes[0].axvspan(offset_time, offset_time + analysis_length, 
+                       alpha=0.2, color='yellow', label="Zoomed Region")
+        
+        # Add markers at the zoom boundaries
+        axes[0].axvline(x=offset_time, color='r', linestyle='--', alpha=0.7, 
+                       label=f"Zoom Start ({offset_time}s)")
+        axes[0].axvline(x=offset_time + analysis_length, color='g', linestyle='--', alpha=0.7,
+                       label=f"Zoom End ({offset_time + analysis_length}s)")
+        
+        # Set plot properties
+        axes[0].set_title("Full Filtered Signal with Zoom Region Highlighted")
+        axes[0].set_xlabel("Time (s)")
+        axes[0].set_ylabel("Amplitude")
+        axes[0].legend(loc='upper right')
+        axes[0].grid(True, alpha=0.3)
+        
+        # Plot 2: Zoomed signal
+        axes[1].plot(time_vector, zoomed_signal, 'g-', alpha=0.9)
+        axes[1].set_title("Zoomed Region")
+        axes[1].set_xlabel("Time (s)")
+        axes[1].set_ylabel("Amplitude")
+        axes[1].grid(True, alpha=0.3)
+        
+        # Add zoom info text
+        zoom_text = (f"Zoom Region: {offset_time}s to {offset_time + analysis_length}s\n"
+                    f"Duration: {analysis_length}s\n"
+                    f"Samples: {len(zoomed_signal)}")
+        
+        # Add text box
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.4)
+        axes[1].text(0.05, 0.95, zoom_text, transform=axes[1].transAxes, 
+                    fontsize=9, verticalalignment='top', bbox=props)
+        
+        plt.tight_layout()
+        
+        # Save figure
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        fig_path = os.path.join(output_dir, 'zoomed_data.png')
+        plt.savefig(fig_path, dpi=300)
+        print(f"Zoomed data figure saved to: {fig_path}")
+        plt.close(fig)  # Close the figure to avoid displaying it
+    
+    return zoomed_signal, time_vector
 
 def normalize_signal(signal):
     """
@@ -506,3 +567,4 @@ def _normalize_by_mad(signal):
     mad = np.median(np.abs(signal - median))
     # Return normalized signal
     return signal / (1.4826 * mad)
+
