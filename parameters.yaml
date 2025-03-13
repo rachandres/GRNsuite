@@ -1,5 +1,6 @@
 # Data acquisition parameters
 sampling_rate: 30000  # Hz
+recording_duration: 3.0 # seconds
 
 # Analysis parameters
 offset_time: 0.1     # seconds

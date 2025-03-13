@@ -1,7 +1,7 @@
 {
     "input_file": "data/20231103-M05-sucr-100-Gal-A2-01.txt",
     "experimenter": "RHP",
-    "analysis_date": "2025-02-21",
+    "analysis_date": "2025-03-13",
     "notes": "Add any experimental notes here",
     "sampling_rate": 30000,
     "offset_time": 0.1,

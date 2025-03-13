@@ -8,6 +8,7 @@ import os
 from .utils import load_parameters
 import json
 from datetime import datetime
+import matplotlib
 
 # ---------- PUBLIC API FUNCTIONS ----------
 
@@ -232,40 +233,52 @@ def interactive_contact_selection(raw_signal):
     Returns:
         np.ndarray: Extracted signal.
     """
-    # load parameters
+    # Load parameters
     params = load_parameters('parameters.yaml')
     recording_duration = params['recording_duration']
     sampling_rate = params['sampling_rate']
 
+    # Find initial position
     num_samples = int(sampling_rate * recording_duration)
-    artifact_index = _find_contact_artifact(raw_signal)
-
+    try:
+        artifact_index = _find_contact_artifact(raw_signal)
+    except ValueError:
+        print("No contact artifact detected automatically. Using start of recording.")
+        artifact_index = 0
+    
     # Initial selection
     start_idx = artifact_index
-    end_idx = start_idx + num_samples
-
+    end_idx = min(start_idx + num_samples, len(raw_signal))
+    
+    # Create a simple state container
+    selection = {'start': start_idx, 'confirmed': False}
+    
     # Create figure
     fig, ax = plt.subplots(figsize=(10, 5))
     plt.subplots_adjust(bottom=0.3)
-
+    
     # Plot full trace
     ax.plot(raw_signal, label="Full Trace", alpha=0.5)
-    signal_line, = ax.plot(range(start_idx, end_idx), raw_signal[start_idx:end_idx], 'r', label="Selected Window")
+    signal_line, = ax.plot(range(start_idx, end_idx), 
+                          raw_signal[start_idx:end_idx], 
+                          'r', label="Selected Window")
     ax.legend()
     ax.set_title("Adjust Start Time with Slider")
 
     # Add slider
     ax_slider = plt.axes([0.2, 0.15, 0.65, 0.03])
-    slider = Slider(ax_slider, 'Start Time (samples)', 0, len(raw_signal) - num_samples, valinit=start_idx, valstep=1)
+    slider = Slider(ax_slider, 'Start Time (samples)', 
+                   0, len(raw_signal) - num_samples, 
+                   valinit=start_idx, valstep=1)
 
     def update(val):
         """Updates the plot when the slider is moved."""
-        nonlocal start_idx, end_idx
-        start_idx = int(slider.val)
-        end_idx = start_idx + num_samples
-        signal_line.set_xdata(range(start_idx, end_idx))
-        signal_line.set_ydata(raw_signal[start_idx:end_idx])
-        fig.canvas.draw_idle()  # Refresh plot dynamically
+        start = int(slider.val)
+        end = min(start + num_samples, len(raw_signal))
+        signal_line.set_xdata(range(start, end))
+        signal_line.set_ydata(raw_signal[start:end])
+        selection['start'] = start  # Update the selection
+        fig.canvas.draw_idle()
 
     slider.on_changed(update)
 
@@ -275,8 +288,10 @@ def interactive_contact_selection(raw_signal):
 
     def zoom(event):
         """Zooms into the selected region."""
-        ax.set_xlim(start_idx, end_idx)
-        ax.set_ylim(min(raw_signal[start_idx:end_idx]), max(raw_signal[start_idx:end_idx]))
+        start = selection['start']
+        end = min(start + num_samples, len(raw_signal))
+        ax.set_xlim(start, end)
+        ax.set_ylim(min(raw_signal[start:end]), max(raw_signal[start:end]))
         fig.canvas.draw_idle()
 
     button_zoom.on_clicked(zoom)
@@ -286,15 +301,28 @@ def interactive_contact_selection(raw_signal):
     button = Button(ax_button, "Confirm Start Time")
 
     def confirm(event):
-        """Closes the window and saves the selected signal."""
+        """Closes the window and marks selection as confirmed."""
+        selection['confirmed'] = True
         plt.close(fig)
 
     button.on_clicked(confirm)
 
-    plt.show(block=True)  # Ensures the UI is interactive
-    plt.pause(0.01)  # Allows GUI updates
-
-    # Return the adjusted selection
+    # Show the figure without blocking indefinitely
+    plt.show(block=False)
+    
+    # Wait for user to confirm or close the figure
+    while plt.fignum_exists(fig.number) and not selection['confirmed']:
+        plt.pause(0.1)
+    
+    # Make sure figure is closed
+    if plt.fignum_exists(fig.number):
+        plt.close(fig)
+            
+    # Extract the signal using final selection
+    start_idx = selection['start']
+    end_idx = min(start_idx + num_samples, len(raw_signal))
+    
+    print(f"Selected segment from index {start_idx} to {end_idx}")
     return raw_signal[start_idx:end_idx]
 
 
