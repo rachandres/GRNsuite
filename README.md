@@ -33,6 +33,7 @@ git clone https://github.com/rachelparkinson/GRNsuite.git
 cd GRNsuite
 python -m venv venv
 source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+pip install grnsuite .
 pip install -r requirements.txt
 ```
 
