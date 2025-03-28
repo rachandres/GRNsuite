@@ -368,17 +368,16 @@ def interactive_contact_selection(raw_signal):
 
     button.on_clicked(confirm)
 
-    # Show the figure without blocking indefinitely
-    plt.show(block=False)
+    # Handle window close event
+    def on_close(event):
+        """Handles window closing."""
+        selection['confirmed'] = True
+        
+    fig.canvas.mpl_connect('close_event', on_close)
+
+    # Show the figure and wait for user interaction
+    plt.show()
     
-    # Wait for user to confirm or close the figure
-    while plt.fignum_exists(fig.number) and not selection['confirmed']:
-        plt.pause(0.1)
-    
-    # Make sure figure is closed
-    if plt.fignum_exists(fig.number):
-        plt.close(fig)
-            
     # Extract the signal using final selection
     start_idx = selection['start']
     end_idx = min(start_idx + num_samples, len(raw_signal))
