@@ -41,7 +41,7 @@ filename_parsing:
 # Metadata
 experimenter: "RHP"
 # analysis_date: Set automatically to current date
-notes: "Add any experimental notes here"
+notes: "Any notes about the experiment"
 
 # Field descriptions (for reference)
 field_descriptions:
